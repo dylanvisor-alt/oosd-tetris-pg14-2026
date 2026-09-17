@@ -1,5 +1,6 @@
 package tetris.controller;
 
+import tetris.audio.AudioManager;
 import tetris.model.Board;
 import tetris.model.GameState;
 import tetris.model.Tetromino;
@@ -37,6 +38,7 @@ public class GameController {
     private final GameScreen gamesScreen;
     private final Color[][] lockedColours = new Color[Board.HEIGHT][Board.WIDTH];
     private final AnimationTimer gravityTimer;
+    private final AudioManager audioManager;
 
     private Tetromino currentPiece;
     private GameState gameState = GameState.RUNNING;
@@ -49,6 +51,7 @@ public class GameController {
     /* -------------------------------------------------------------------- */
 
     public void startGame() {
+        audioManager.applyMusicSetting();
         gamesScreen.setKeyHandler(this::handleKeyPress);
         spawnPiece();
         render();
@@ -111,6 +114,18 @@ public class GameController {
     /* -------------------------------------------------------------------- */
 
     private void handleKeyPress(KeyEvent event) {
+        if (event.getCode() == KeyCode.M) {
+            boolean musicEnabled = audioManager.toggleMusic();
+            gamesScreen.showStatus("Music " + (musicEnabled ? "on" : "off"));
+            return;
+        }
+
+        if (event.getCode() == KeyCode.S) {
+            boolean soundEffectsEnabled = audioManager.toggleSoundEffects();
+            gamesScreen.showStatus("Sound effects " + (soundEffectsEnabled ? "on" : "off"));
+            return;
+        }
+
         if (event.getCode() == KeyCode.P && gameState != GameState.GAME_OVER) {
             togglePause();
             return;
@@ -142,9 +157,10 @@ public class GameController {
 
     private Runnable backToMenu;
 
-    public GameController(GameScreen gameScreen, Runnable backToMenu) {
+    public GameController(GameScreen gameScreen, Runnable backToMenu, AudioManager audioManager) {
         this.gamesScreen = gameScreen;
         this.backToMenu = backToMenu;
+        this.audioManager = audioManager;
         gravityTimer = new AnimationTimer() {
             @Override
             public void handle(long currentTimeNanos) {
@@ -221,6 +237,7 @@ public class GameController {
         if (!clearedRows.isEmpty()) {
             score += scoreForLines(clearedRows.size());
             gamesScreen.updateScore(score);
+            audioManager.playLineClear();
         }
         spawnPiece();
     }
