@@ -134,7 +134,7 @@ public class GameScreen {
         scoreRow.setAlignment(Pos.CENTER);
 
         Label controlsLabel = new Label(
-                "\u2190 \u2192 Move  |  \u2191 Rotate  \n \u2193 Soft Drop  |  Space - Hard Drop  |  P - Pause");
+                "\u2190 \u2192 Move  |  \u2191 Rotate  \n \u2193 Soft Drop  |  Space - Hard Drop  |  P - Pause  |  M - Music  |  S - Sound");
         controlsLabel.getStyleClass().add("game-controls");
         controlsLabel.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
         controlsLabel.setAlignment(Pos.CENTER);
