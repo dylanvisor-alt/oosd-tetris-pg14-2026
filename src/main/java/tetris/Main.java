@@ -27,7 +27,7 @@ public class Main extends Application {
         this.primaryStage = primaryStage;
         audioManager = new AudioManager(configController);
 
-        sceneManager = new SceneManager(primaryStage);
+        sceneManager = SceneManager.init(primaryStage);
         primaryStage.setTitle("Tetris - 2006ICT");
         primaryStage.setResizable(false);
 
