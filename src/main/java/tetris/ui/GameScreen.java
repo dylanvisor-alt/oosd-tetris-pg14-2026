@@ -67,26 +67,26 @@ public class GameScreen {
         /*  build the board itself - locked grid, active piece layer, pause     */
         /* -------------------------------------------------------------------- */
         GridPane lockedGrid = createLockedGrid();
-        int boardWidth = boardWidth * cellSize;
-        int boardHeight = boardHeight * cellSize;
+        int boardPixelWidth = boardWidth * cellSize;
+        int boardPixelHeight = boardHeight * cellSize;
 
-        activePieceLayer.setMinSize(boardWidth, boardHeight);
-        activePieceLayer.setPrefSize(boardWidth, boardHeight);
-        activePieceLayer.setMaxSize(boardWidth, boardHeight);
+        activePieceLayer.setMinSize(boardPixelWidth, boardPixelHeight);
+        activePieceLayer.setPrefSize(boardPixelWidth, boardPixelHeight);
+        activePieceLayer.setMaxSize(boardPixelWidth, boardPixelHeight);
         activePieceLayer.setMouseTransparent(true);
 
-        pauseOverlay.setMinSize(boardWidth, boardHeight);
-        pauseOverlay.setPrefSize(boardWidth, boardHeight);
-        pauseOverlay.setMaxSize(boardWidth, boardHeight);
+        pauseOverlay.setMinSize(boardPixelWidth, boardPixelHeight);
+        pauseOverlay.setPrefSize(boardPixelWidth, boardPixelHeight);
+        pauseOverlay.setMaxSize(boardPixelWidth, boardHeight);
 
         // stacked on top of each other: locked blocks at the bottom, the
         // falling piece above that, the pause overlay above everything
 
         StackPane boardStack = new StackPane(lockedGrid, activePieceLayer, pauseOverlay);
         boardStack.setAlignment(Pos.TOP_LEFT);
-        boardStack.setMinSize(boardWidth, boardHeight);
-        boardStack.setPrefSize(boardWidth, boardHeight);
-        boardStack.setMaxSize(boardWidth, boardHeight);
+        boardStack.setMinSize(boardPixelWidth, boardPixelHeight);
+        boardStack.setPrefSize(boardPixelWidth, boardPixelHeight);
+        boardStack.setMaxSize(boardPixelWidth, boardPixelHeight);
         boardStack.getStyleClass().add("game-board-frame");
 
         /* -------------------------------------------------------------------- */
@@ -176,9 +176,9 @@ public class GameScreen {
 
         int boardPixelWidth = boardWidth * cellSize;
         int boardPixelHeight = boardHeight * cellSize;
-        grid.setMinSize(boardWidth, boardHeight);
-        grid.setPrefSize(boardWidth, boardHeight);
-        grid.setMaxSize(boardWidth, boardHeight);
+        grid.setMinSize(boardPixelWidth, boardPixelHeight);
+        grid.setPrefSize(boardPixelWidth, boardPixelHeight);
+        grid.setMaxSize(boardPixelWidth, boardPixelHeight);
         return grid;
     }
 
