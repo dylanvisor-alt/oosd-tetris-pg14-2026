@@ -12,6 +12,9 @@ import javafx.animation.AnimationTimer;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.Color;
+import tetris.ai.AiMove;
+import tetris.ai.AiPlayer;
+import tetris.stats.MatchHistoryService;
 
 import java.util.List;
 
@@ -36,9 +39,11 @@ public class GameController {
     /* -------------------------------------------------------------------- */
     /*  game state - changes constantly while playing                       */
     /* -------------------------------------------------------------------- */
-    private final Board board = new Board();
+    private final Board board;
     private final GameScreen gamesScreen;
-    private final Color[][] lockedColours = new Color[Board.HEIGHT][Board.WIDTH];
+    private final Color[][] lockedColours;
+    private final ConfigController configController;
+    private final MatchHistoryService matchHistoryService;
     private final AnimationTimer gravityTimer;
     private final AudioManager audioManager;
     private final ScoringStrategy scoringStrategy;
@@ -105,7 +110,7 @@ public class GameController {
         }
 
         double fallProgress = accumulatedFallMs / DROP_SPEED;
-        gamesScreen.setActivePieceVerticalOffset(fallProgress * GameScreen.CELL_SIZE);
+        gamesScreen.setActivePieceVerticalOffset(fallProgress * GameScreen.getCellSize());
     }
 
     private boolean canCurrentPieceFall() {
@@ -160,8 +165,8 @@ public class GameController {
 
     private Runnable backToMenu;
 
-    public GameController(GameScreen gameScreen, Runnable backToMenu, AudioManager audioManager) {
-        this(gameScreen, backToMenu, audioManager, new StandardScoringStrategy());
+    public GameController(GameScreen gameScreen, Runnable backToMenu, AudioManager audioManager, ConfigController configController, MatchHistoryService matchHistoryService) {
+        this(gameScreen, backToMenu, audioManager, configController, matchHistoryService, new StandardScoringStrategy());
     }
 
     /**
@@ -170,10 +175,13 @@ public class GameController {
      *                        rules without changing any other game logic.
      */
     public GameController(GameScreen gameScreen, Runnable backToMenu,
-                          AudioManager audioManager, ScoringStrategy scoringStrategy) {
+                          AudioManager audioManager, ScoringStrategy scoringStrategy, ConfigController configController, MatchHistoryService matchHistoryService) {
         this.gamesScreen = gameScreen;
         this.backToMenu = backToMenu;
         this.audioManager = audioManager;
+        this.scoringStrategy = scoringStrategy;
+        this.configController = configController;
+        this.matchHistoryService = matchHistoryService;
         this.scoringStrategy = scoringStrategy;
         gravityTimer = new AnimationTimer() {
             @Override
@@ -233,7 +241,7 @@ public class GameController {
 
     private void saveCurrentPieceColours() {
         board.eachCellFilled(currentPiece, currentPiece.getX(), currentPiece.getY(), (boardRow, boardCol) -> {
-            if (boardRow >= 0 && boardRow < Board.HEIGHT && boardCol >= 0 && boardCol < Board.WIDTH) {
+            if (boardRow >= 0 && boardRow < Board.getHeight() && boardCol >= 0 && boardCol < Board.getWidth()) {
                 lockedColours[boardRow][boardCol] = lockedColour;
             }
         });
@@ -260,7 +268,7 @@ public class GameController {
         for (int row = clearedRow; row > 0; row--) {
             lockedColours[row] = lockedColours[row - 1].clone();
         }
-        lockedColours[0] = new Color[Board.WIDTH];
+        lockedColours[0] = new Color[Board.getWidth()];
     }
 
     /* -------------------------------------------------------------------- */
@@ -271,10 +279,33 @@ public class GameController {
         currentPiece = TetrominoFactory.createRandomPiece();
         accumulatedFallMs = 0;
         lastFrameTimeMs = 0;
+
         if (!board.canPlace(currentPiece, currentPiece.getX(), currentPiece.getY())) {
             gameState = GameState.GAME_OVER;
             gravityTimer.stop();
             gamesScreen.showGameOver(score);
+            matchHistoryService.recordMatchAsync(score, board.getWidth(), board.getHeight());
+            return;
+        }
+
+        if (configController.isAiPlayEnabled()) {
+            positionPieceWithAi();
+        }
+    }
+
+    private void positionPieceWithAi() {
+        AiMove move = AiPlayer.chooseBestPlacement(board, currentPiece);
+
+        for (int rotation = 0; rotation < move.rotations(); rotation++) {
+            currentPiece.rotate();
+        }
+
+        while (currentPiece.getX() != move.targetX()) {
+            int beforeX = currentPiece.getX();
+            moveHorizontally(move.targetX() > currentPiece.getX() ? 1 : -1);
+            if (currentPiece.getX() == beforeX) {
+                break;
+            }
         }
     }
 
@@ -300,6 +331,6 @@ public class GameController {
     private void render() {
         gamesScreen.render(board, lockedColours, currentPiece);
         double fallProgress = accumulatedFallMs / DROP_SPEED;
-        gamesScreen.setActivePieceVerticalOffset(fallProgress * GameScreen.CELL_SIZE);
+        gamesScreen.setActivePieceVerticalOffset(fallProgress * GameScreen.getCellSize());
     }
 }

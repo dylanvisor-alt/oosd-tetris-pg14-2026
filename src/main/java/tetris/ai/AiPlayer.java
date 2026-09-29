@@ -6,7 +6,7 @@ import tetris.model.Tetromino;
 import java.util.ArrayList;
 import java.util.List;
 
-// ai simulates dropping piece in every possible spot on board, scores the reuslt, and returns the placement with the highest score
+// ai simulates dropping piece in every possible spot on board, scores the result, and returns the placement with the highest score
 // simulation experimentation model (heuristic)
 
 public final class AiPlayer {
