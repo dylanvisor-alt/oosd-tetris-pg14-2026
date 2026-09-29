@@ -25,47 +25,95 @@ class BoardTest {
 
     @Test
     void emptyBoardHasNoOccupiedCells() {
+        Board board = new Board();
 
+        for (int row = 0; row < Board.HEIGHT; row++) {
+            for (int col = 0; col < Board.WIDTH; col++) {
+                assertFalse(board.isCellOccupied(row, col));
+            }
+        }
     }
 
     @Test
     void setCellMarksThatCellOccupied() {
+        Board board = new Board();
 
+        board.setCell(5, 5, 1);
+
+        assertTrue(board.isCellOccupied(5, 5));
+        assertEquals(1, board.getCell(5, 5));
     }
 
     @Test
     void setCellIgnoresOutOfBoundsWritesInsteadOfThrowing() {
+        Board board = new Board();
 
+        assertDoesNotThrow(() -> {
+            board.setCell(-1, 0, 1);
+            board.setCell(0, Board.WIDTH, 1);
+        });
+
+        assertFalse(board.isCellOccupied(0, 0));
     }
 
     @Test
     void canPlaceIsFalseWhenOverlappingLockedCells() {
+        Board board = new Board();
+        Tetromino piece = new OPiece(0, 0, TEST_COLOUR);
 
+        assertTrue(board.canPlace(piece, 4, 0));
     }
 
     @Test
     void canPlaceIsFalseBeyondTheFloor() {
+        Board board = new Board();
+        Tetromino piece = new OPiece(0, 0, TEST_COLOUR);
 
+        assertFalse(board.canPlace(piece, 4, - 1));
     }
 
     @Test
     void canPlaceIsFalseBeyondTheSideWalls() {
+        Board board = new Board();
+        Tetromino piece = new OPiece(0, 0, TEST_COLOUR);
 
+        assertFalse(board.canPlace(piece, -1, 0));
+        assertFalse(board.canPlace(piece, Board.WIDTH - 1, 0));
     }
 
     @Test
     void lockPieceFillsEveryCellTheShapeOccupies() {
+        Board board = new Board();
+        Tetromino piece = new OPiece(0, 0, TEST_COLOUR);
 
+        board.lockPiece(piece);
+
+        assertTrue(board.isCellOccupied(0, 0));
+        assertTrue(board.isCellOccupied(0, 1));
+        assertTrue(board.isCellOccupied(1, 0));
+        assertTrue(board.isCellOccupied(1, 1));
     }
 
     @Test
     void eachCellFilledVisitsOnlyTheFilledShapeCells() {
+        Board board = new Board();
+        Tetromino piece = new OPiece(0, 0, TEST_COLOUR);
+        List<int[]> visited = new java.util.ArrayList<>();
 
+        board.eachCellFilled(piece, 2, 3, (row, col) -> visited.add(new int[] {row, col}));
+
+        assertEquals(4, visited.size());
     }
 
     @Test
     void clearFullRowsRemovesASingleCompletedRow() {
+        Board board = new Board();
+        board.setCell(Board.HEIGHT - 1, 0, 1);
 
+        List<Integer> clearedRows = board.clearFullRows();
+
+        assertTrue(board.isCellOccupied(Board.HEIGHT -1, 0));
+        assertFalse(board.isCellOccupied(Board.HEIGHT - 2, 0));
     }
 
     @Test
