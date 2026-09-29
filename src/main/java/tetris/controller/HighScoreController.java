@@ -4,6 +4,7 @@ import tetris.model.ScoreEntry;
 import tetris.persistence.ScoreRepository;
 import tetris.persistence.SQLiteScoreRepository;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,7 +25,19 @@ public class HighScoreController {
     }
 
     public List<ScoreEntry> getTopScores() {
-        return scoreRepository.findTopScores(HIGH_SCORE_LIMIT);
+        List<ScoreEntry> scores = scoreRepository.findTopScores(HIGH_SCORE_LIMIT);
+
+        // Stream: run the repository's rows through a pipeline instead of
+        // returning them as-is. Comparator: highest score first, ties broken
+        // alphabetically by name so the displayed order is always deterministic.
+        // (No distinct() here on purpose: two different games can legitimately
+        // produce the same player name + score, and de-duping on those two
+        // fields would silently drop real high scores.)
+        return scores.stream()
+                .sorted(Comparator.comparingInt(ScoreEntry::score)
+                        .reversed()
+                        .thenComparing(ScoreEntry::playerName, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     public void saveScore(String playerName, int score) {

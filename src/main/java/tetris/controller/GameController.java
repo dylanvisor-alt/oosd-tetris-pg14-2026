@@ -1,9 +1,12 @@
 package tetris.controller;
 
+import tetris.audio.AudioManager;
 import tetris.model.Board;
 import tetris.model.GameState;
 import tetris.model.Tetromino;
 import tetris.model.TetrominoFactory;
+import tetris.scoring.ScoringStrategy;
+import tetris.scoring.StandardScoringStrategy;
 import tetris.ui.GameScreen;
 import javafx.animation.AnimationTimer;
 import javafx.scene.input.KeyCode;
@@ -37,6 +40,8 @@ public class GameController {
     private final GameScreen gamesScreen;
     private final Color[][] lockedColours = new Color[Board.HEIGHT][Board.WIDTH];
     private final AnimationTimer gravityTimer;
+    private final AudioManager audioManager;
+    private final ScoringStrategy scoringStrategy;
 
     private Tetromino currentPiece;
     private GameState gameState = GameState.RUNNING;
@@ -49,6 +54,7 @@ public class GameController {
     /* -------------------------------------------------------------------- */
 
     public void startGame() {
+        audioManager.applyMusicSetting();
         gamesScreen.setKeyHandler(this::handleKeyPress);
         spawnPiece();
         render();
@@ -111,6 +117,18 @@ public class GameController {
     /* -------------------------------------------------------------------- */
 
     private void handleKeyPress(KeyEvent event) {
+        if (event.getCode() == KeyCode.M) {
+            boolean musicEnabled = audioManager.toggleMusic();
+            gamesScreen.showStatus("Music " + (musicEnabled ? "on" : "off"));
+            return;
+        }
+
+        if (event.getCode() == KeyCode.S) {
+            boolean soundEffectsEnabled = audioManager.toggleSoundEffects();
+            gamesScreen.showStatus("Sound effects " + (soundEffectsEnabled ? "on" : "off"));
+            return;
+        }
+
         if (event.getCode() == KeyCode.P && gameState != GameState.GAME_OVER) {
             togglePause();
             return;
@@ -142,9 +160,21 @@ public class GameController {
 
     private Runnable backToMenu;
 
-    public GameController(GameScreen gameScreen, Runnable backToMenu) {
+    public GameController(GameScreen gameScreen, Runnable backToMenu, AudioManager audioManager) {
+        this(gameScreen, backToMenu, audioManager, new StandardScoringStrategy());
+    }
+
+    /**
+     * @param scoringStrategy the Strategy used to turn a line clear into points;
+     *                        pass a different implementation to change the scoring
+     *                        rules without changing any other game logic.
+     */
+    public GameController(GameScreen gameScreen, Runnable backToMenu,
+                          AudioManager audioManager, ScoringStrategy scoringStrategy) {
         this.gamesScreen = gameScreen;
         this.backToMenu = backToMenu;
+        this.audioManager = audioManager;
+        this.scoringStrategy = scoringStrategy;
         gravityTimer = new AnimationTimer() {
             @Override
             public void handle(long currentTimeNanos) {
@@ -219,8 +249,9 @@ public class GameController {
         }
 
         if (!clearedRows.isEmpty()) {
-            score += scoreForLines(clearedRows.size());
+            score += scoringStrategy.scoreForLines(clearedRows.size());
             gamesScreen.updateScore(score);
+            audioManager.playLineClear();
         }
         spawnPiece();
     }
@@ -230,16 +261,6 @@ public class GameController {
             lockedColours[row] = lockedColours[row - 1].clone();
         }
         lockedColours[0] = new Color[Board.WIDTH];
-    }
-
-    private int scoreForLines(int lineCount) {
-        return switch (lineCount) {
-            case 1 -> 100;
-            case 2 -> 300;
-            case 3 -> 500;
-            case 4 -> 800;
-            default -> 0;
-        };
     }
 
     /* -------------------------------------------------------------------- */

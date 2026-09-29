@@ -3,6 +3,7 @@ package tetris;
 import tetris.controller.ConfigController;
 import tetris.controller.GameController;
 import tetris.controller.HighScoreController;
+import tetris.audio.AudioManager;
 import tetris.ui.*;
 import tetris.util.SceneManager;
 import javafx.application.Application;
@@ -18,13 +19,15 @@ public class Main extends Application {
     private MainMenuScreen mainMenuScreen;
     private final HighScoreController highScoreController = new HighScoreController();
     private final ConfigController configController = new ConfigController();
+    private AudioManager audioManager;
 
     @Override
     public void start(Stage primaryStage) {
 
         this.primaryStage = primaryStage;
+        audioManager = new AudioManager(configController);
 
-        sceneManager = new SceneManager(primaryStage);
+        sceneManager = SceneManager.init(primaryStage);
         primaryStage.setTitle("Tetris - 2006ICT");
         primaryStage.setResizable(false);
 
@@ -46,7 +49,7 @@ public class Main extends Application {
 
     private void showGame() {
         GameScreen gameScreen = new GameScreen(this::showGame, this::saveHighScore, this::showMainMenu);
-        GameController gameController = new GameController(gameScreen, this::showMainMenu);
+        GameController gameController = new GameController(gameScreen, this::showMainMenu, audioManager);
         sceneManager.show(gameScreen.getRoot());
         gameController.startGame();
     }
@@ -91,6 +94,13 @@ public class Main extends Application {
         ExitDialog exitDialogue = new ExitDialog(primaryStage);
         if (exitDialogue.showAndWait()) {
             primaryStage.close();
+        }
+    }
+
+    @Override
+    public void stop() {
+        if (audioManager != null) {
+            audioManager.dispose();
         }
     }
 
