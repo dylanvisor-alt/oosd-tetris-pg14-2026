@@ -1,6 +1,5 @@
 package tetris.model;
 
-/** A player's name and score as displayed on the high-score table. */
 public record ScoreEntry(String playerName, int score) {
 
     public ScoreEntry {
