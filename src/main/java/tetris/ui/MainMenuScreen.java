@@ -17,12 +17,13 @@ public class MainMenuScreen {
             Runnable onPlay,
             Runnable onConfiguration,
             Runnable onHighScores,
-            Runnable onExit
+            Runnable onExit,
+            Runnable onTwoPlayer
     ) {
         Label title = new Label("TETRIS");
         title.getStyleClass().add("game-title");
 
-        Label subtitle = new Label("2006ICT - Milestone 1");
+        Label subtitle = new Label("2006ICT - Final Submission");
         subtitle.getStyleClass().add("subtitle");
 
         Button playButton = createMenuButton("Play", onPlay);
@@ -30,15 +31,19 @@ public class MainMenuScreen {
         Button configurationButton = createMenuButton("Configuration", onConfiguration);
         Button highScoresButton = createMenuButton("High Scores", onHighScores);
         Button exitButton = createMenuButton("Exit", onExit);
+        Button twoPlayerButton = createMenuButton("2 Player!", onTwoPlayer);
+
 
         VBox menu = new VBox(
                 14,
                 title,
                 subtitle,
                 playButton,
+                twoPlayerButton,
                 configurationButton,
                 highScoresButton,
                 exitButton
+
         );
         menu.setAlignment(Pos.CENTER);
         menu.setPadding(new Insets(48));
