@@ -63,4 +63,12 @@ public final class ConfigController {
     public void setExtendedModeEnabled(boolean enabled) {
         gameConfig.setExtendedModeEnabled(enabled);
     }
+
+    public int getBoardWidth() {
+        return gameConfig.getBoardWidth();
+    }
+
+    public int getBoardHeight() {
+        return gameConfig.getBoardHeight();
+    }
 }

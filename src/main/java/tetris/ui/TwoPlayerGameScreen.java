@@ -36,7 +36,7 @@ public class TwoPlayerGameScreen {
         exitButton.setOnAction(event -> onExit.run());
         exitButton.getStyleClass().add("game-action-button");
 
-        Label controlsLabel = new Label("P1: Arrow keys + Space | P2: WASD + Q | P - Pause | E - Exit whilst paused");
+        Label controlsLabel = new Label("P1: Arrow keys + Space | P2: WASD + Q | P - Pause | E - Exit When Paused");
         controlsLabel.getStyleClass().add("game-controls");
 
         VBox bottomBar = new VBox(6, statusLabel, controlsLabel, exitButton);

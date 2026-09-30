@@ -26,6 +26,9 @@ public class PlayerBoardView {
     private final Label scoreLabel = new Label("Score: 0");
     private final Label outLabel = new Label("OUT");
     private final VBox root;
+    private Tetromino lastRenderedPiece;
+    private int[][] lastRenderedShape;
+
 
     private Group activePieceView;
 
@@ -92,14 +95,25 @@ public class PlayerBoardView {
             }
         }
 
-        activePieceLayer.getChildren().clear();
-        activePieceView = null;
         if (currentPiece == null) {
+            activePieceLayer.getChildren().clear();
+            activePieceView = null;
+            lastRenderedPiece = null;
             return;
         }
 
-        activePieceView = makePieceView(currentPiece);
-        activePieceLayer.getChildren().add(activePieceView);
+        boolean needsRebuild = activePieceView == null || currentPiece != lastRenderedPiece || currentPiece.getShape() != lastRenderedShape;
+
+        if (needsRebuild) {
+            activePieceLayer.getChildren().clear();;
+            activePieceView = makePieceView(currentPiece);
+            activePieceLayer.getChildren().add(activePieceView);
+            lastRenderedPiece = currentPiece;
+            lastRenderedShape = currentPiece.getShape();
+        } else {
+            activePieceView.setLayoutX(currentPiece.getX() * cellSize);
+            activePieceView.setLayoutY(currentPiece.getY() * cellSize) ;
+        }
     }
 
     public Group makePieceView(Tetromino piece) {

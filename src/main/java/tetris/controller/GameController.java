@@ -110,7 +110,7 @@ public class GameController {
         }
 
         double fallProgress = accumulatedFallMs / DROP_SPEED;
-        gamesScreen.setActivePieceVerticalOffset(fallProgress * GameScreen.getCellSize());
+        gamesScreen.setActivePieceVerticalOffset(fallProgress * gamesScreen.getCellSize());
     }
 
     private boolean canCurrentPieceFall() {
@@ -166,7 +166,7 @@ public class GameController {
     private Runnable backToMenu;
 
     public GameController(GameScreen gameScreen, Runnable backToMenu, AudioManager audioManager, ConfigController configController, MatchHistoryService matchHistoryService) {
-        this(gameScreen, backToMenu, audioManager, configController, matchHistoryService, new StandardScoringStrategy());
+        this(gameScreen, backToMenu, audioManager, new StandardScoringStrategy(), configController, matchHistoryService);
     }
 
     /**
@@ -182,7 +182,9 @@ public class GameController {
         this.scoringStrategy = scoringStrategy;
         this.configController = configController;
         this.matchHistoryService = matchHistoryService;
-        this.scoringStrategy = scoringStrategy;
+        this.board = new Board(configController.getBoardWidth(), configController.getBoardHeight());
+        this.lockedColours = new Color[board.getHeight()][board.getWidth()];
+
         gravityTimer = new AnimationTimer() {
             @Override
             public void handle(long currentTimeNanos) {
@@ -190,6 +192,7 @@ public class GameController {
                 updateGravity(currentTimeMs);
             }
         };
+
     }
 
     private void moveHorizontally(int direction) {
@@ -241,7 +244,7 @@ public class GameController {
 
     private void saveCurrentPieceColours() {
         board.eachCellFilled(currentPiece, currentPiece.getX(), currentPiece.getY(), (boardRow, boardCol) -> {
-            if (boardRow >= 0 && boardRow < Board.getHeight() && boardCol >= 0 && boardCol < Board.getWidth()) {
+            if (boardRow >= 0 && boardRow < board.getHeight() && boardCol >= 0 && boardCol < board.getWidth()) {
                 lockedColours[boardRow][boardCol] = lockedColour;
             }
         });
@@ -268,7 +271,7 @@ public class GameController {
         for (int row = clearedRow; row > 0; row--) {
             lockedColours[row] = lockedColours[row - 1].clone();
         }
-        lockedColours[0] = new Color[Board.getWidth()];
+        lockedColours[0] = new Color[board.getWidth()];
     }
 
     /* -------------------------------------------------------------------- */
@@ -331,6 +334,6 @@ public class GameController {
     private void render() {
         gamesScreen.render(board, lockedColours, currentPiece);
         double fallProgress = accumulatedFallMs / DROP_SPEED;
-        gamesScreen.setActivePieceVerticalOffset(fallProgress * GameScreen.getCellSize());
+        gamesScreen.setActivePieceVerticalOffset(fallProgress * gamesScreen.getCellSize());
     }
 }

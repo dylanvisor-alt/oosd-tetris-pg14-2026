@@ -17,6 +17,7 @@ import javafx.stage.Stage;
 
 public class Main extends Application {
 
+
     private SceneManager sceneManager;
     private MainMenuScreen mainMenuScreen;
     private final HighScoreController highScoreController = new HighScoreController();

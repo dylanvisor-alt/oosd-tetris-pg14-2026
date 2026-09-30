@@ -53,6 +53,9 @@ public class GameScreen {
     private Group activePieceView;
     private int finalScore;
 
+    private Tetromino lastRenderedPiece;
+    private int[][] lastRenderedShape;
+
     public GameScreen(int boardWidth, int boardHeight, Runnable onRestart, IntConsumer onSaveScore, Runnable menuExitButton) {
 
 
@@ -77,7 +80,7 @@ public class GameScreen {
 
         pauseOverlay.setMinSize(boardPixelWidth, boardPixelHeight);
         pauseOverlay.setPrefSize(boardPixelWidth, boardPixelHeight);
-        pauseOverlay.setMaxSize(boardPixelWidth, boardHeight);
+        pauseOverlay.setMaxSize(boardPixelWidth, boardPixelHeight);
 
         // stacked on top of each other: locked blocks at the bottom, the
         // falling piece above that, the pause overlay above everything
@@ -233,21 +236,32 @@ public class GameScreen {
 
     // repaints the fixed blocks and recreates the currently falling piece
     public void render(Board board, Color[][] lockedColors, Tetromino currentPiece) {
-        for (int row = 0; row < board.getHeight(); row++) {
-            for (int col = 0; col < board.getWidth(); col++) {
+        for (int row = 0; row < boardHeight; row++) {
+            for (int col = 0; col < boardWidth; col++) {
                 lockedCellViews[row][col].setFill(
                         board.isCellOccupied(row, col) ? lockedColors[row][col] : EMPTY_COLOUR);
             }
         }
 
-        activePieceLayer.getChildren().clear();
-        activePieceView = null;
         if (currentPiece == null) {
+            activePieceLayer.getChildren().clear();
+            activePieceView = null;
+            lastRenderedPiece = null;
             return;
         }
 
-        activePieceView = makePieceView(currentPiece);
-        activePieceLayer.getChildren().add(activePieceView);
+        boolean needsRebuild = activePieceView == null || currentPiece != lastRenderedPiece || currentPiece.getShape() != lastRenderedShape;
+
+        if (needsRebuild) {
+            activePieceLayer.getChildren().clear();;
+            activePieceView = makePieceView(currentPiece);
+            activePieceLayer.getChildren().add(activePieceView);
+            lastRenderedPiece = currentPiece;
+            lastRenderedShape = currentPiece.getShape();
+        } else {
+            activePieceView.setLayoutX(currentPiece.getX() * cellSize);
+            activePieceView.setLayoutY(currentPiece.getY() * cellSize) ;
+        }
     }
 
     private Group makePieceView(Tetromino piece) {

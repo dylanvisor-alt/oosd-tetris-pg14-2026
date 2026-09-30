@@ -33,6 +33,14 @@ public final class GameConfig {
         return level;
     }
 
+    public int getBoardWidth() {
+        return Integer.parseInt(fieldSize.split(" x ")[0].trim());
+    }
+
+    public int getBoardHeight() {
+        return Integer.parseInt(fieldSize.split(" x ")[0].trim());
+    }
+
     public void setLevel(int level) {
         if (level < MIN_LEVEL || level > MAX_LEVEL) {
             throw new IllegalArgumentException("Level must be between " + MIN_LEVEL + " and " + MAX_LEVEL);
