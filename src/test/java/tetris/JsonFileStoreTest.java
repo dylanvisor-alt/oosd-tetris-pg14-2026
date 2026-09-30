@@ -2,7 +2,6 @@ package tetris;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.platform.engine.support.discovery.SelectorResolver;
 import tetris.persistence.JsonFileStore;
 import tetris.stats.MatchRecord;
 
