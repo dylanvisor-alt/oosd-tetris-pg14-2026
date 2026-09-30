@@ -18,5 +18,20 @@ public class TwoPlayerGameController {
     private static final Color = Color.web("#007aff")
 
     private final TwoPlayerGameScreen screen;
+    private final Runnable backToMenu;
+    private final AnimationTimer gravity timer;
+
+    private double lastFrameTimeMs;
+    private boolean paused;
+
+    public TwoPlayerGameController(TwoPlayerGameScreen,Runnable backToMenu) {
+        this.screen = screen;
+        this.backToMenu = backToMenu;
+        this.player1 = new PlayerSession(screen.getPlayer1View());
+        this.player2 = new PlayerSession(screen.getPlayer2View());
+        gravity timer = new AnimationTimer() {}
+}
+
+    
 
 }
