@@ -9,11 +9,29 @@ public class Board {
     /*  the grid itself - 0 = empty, 1 = occupied                          */
     /* -------------------------------------------------------------------- */
     private final int[][] grid;
+    private final int width;
+    private final int height;
 
     public Board() {
-        grid = new int[HEIGHT][WIDTH];
+        this(WIDTH, HEIGHT);
     }
 
+    public Board(int width, int height) {
+        if (width <= 0 || height <= 0) {
+            throw new IllegalArgumentException("width and height must be positive");
+        }
+        this.width = width;
+        this.height = height;
+        this.grid = new int[height][width];
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
     /* -------------------------------------------------------------------- */
     /*  basic cell access                                                  */
     /* -------------------------------------------------------------------- */
@@ -21,14 +39,14 @@ public class Board {
     // treats out-of-bounds as "occupied" too, so walls/floor act like
     // collisions without needing separate boundary checks everywhere else
     public boolean isCellOccupied(int row, int col) {
-        if (row < 0 || row >= HEIGHT || col < 0 || col >= WIDTH) {
+        if (row < 0 || row >= height || col < 0 || col >= width) {
             return true;
         }
         return grid[row][col] != 0;
     }
 
     public void setCell(int row, int col, int value) {
-        if (row >= 0 && row < HEIGHT && col >= 0 && col < WIDTH) {
+        if (row >= 0 && row < height && col >= 0 && col < width) {
             grid[row][col] = value;
         }
     }
@@ -82,7 +100,7 @@ public class Board {
     public java.util.List<Integer> clearFullRows() {
         java.util.List<Integer> clearedRows = new java.util.ArrayList<>();
 
-        for (int row = HEIGHT - 1; row >= 0; row--) {
+        for (int row = height - 1; row >= 0; row--) {
             if (isRowFull(row)) {
                 removeRow(row);
                 clearedRows.add(row);
@@ -108,6 +126,6 @@ public class Board {
         for (int row = rowToRemove; row > 0; row--) {
             grid[row] = grid[row - 1].clone();
         }
-        grid[0] = new int[WIDTH];
+        grid[0] = new int[width];
     }
 }

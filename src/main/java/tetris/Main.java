@@ -3,6 +3,8 @@ package tetris;
 import tetris.controller.ConfigController;
 import tetris.controller.GameController;
 import tetris.controller.HighScoreController;
+import tetris.controller.TwoPlayerGameController;
+import tetris.stats.MatchHistoryService;
 import tetris.audio.AudioManager;
 import tetris.ui.*;
 import tetris.util.SceneManager;
@@ -15,12 +17,13 @@ import javafx.stage.Stage;
 
 public class Main extends Application {
 
+
     private SceneManager sceneManager;
     private MainMenuScreen mainMenuScreen;
     private final HighScoreController highScoreController = new HighScoreController();
     private final ConfigController configController = new ConfigController();
     private AudioManager audioManager;
-
+    private final MatchHistoryService matchHistoryService = new MatchHistoryService();
     @Override
     public void start(Stage primaryStage) {
 
@@ -35,7 +38,8 @@ public class Main extends Application {
                 this::showGame,
                 this::showConfiguration,
                 this::showHighScores,
-                this::confirmExit
+                this::confirmExit,
+                this::showTwoPlayerGame
         );
 
         SplashScreen splashScreen = new SplashScreen();
@@ -48,11 +52,24 @@ public class Main extends Application {
     }
 
     private void showGame() {
-        GameScreen gameScreen = new GameScreen(this::showGame, this::saveHighScore, this::showMainMenu);
-        GameController gameController = new GameController(gameScreen, this::showMainMenu, audioManager);
+        GameScreen gameScreen = new GameScreen(
+                configController.getBoardWidth(), configController.getBoardHeight(), this::showGame, this::saveHighScore, this::showMainMenu);
+
+        GameController gameController = new GameController(
+                gameScreen, this::showMainMenu, audioManager, configController, matchHistoryService);
+
         sceneManager.show(gameScreen.getRoot());
         gameController.startGame();
     }
+
+    private void showTwoPlayerGame() {
+        TwoPlayerGameScreen twoPlayerGameScreen = new TwoPlayerGameScreen(this::showMainMenu);
+        TwoPlayerGameController twoPlayerGameController =
+                new TwoPlayerGameController(twoPlayerGameScreen, this::showMainMenu);
+        sceneManager.show(twoPlayerGameScreen.getRoot());
+        twoPlayerGameController.startGame();
+    }
+
 
     private void showConfiguration() {
         ConfigurationScreen configurationScreen = new ConfigurationScreen(
@@ -102,6 +119,7 @@ public class Main extends Application {
         if (audioManager != null) {
             audioManager.dispose();
         }
+        matchHistoryService.shutdown();
     }
 
     public static void main(String[] args) {

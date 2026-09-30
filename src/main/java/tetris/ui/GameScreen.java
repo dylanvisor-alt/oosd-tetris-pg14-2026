@@ -31,12 +31,17 @@ import java.util.function.IntConsumer;
 
 public class GameScreen {
 
-    public static final int CELL_SIZE = 28;
+    public static final int DEFAULT_CELL_SIZE = 28;
+    public static final int MAX_BOARD_PIXEL_WIDTH = 280;
+    public static final int MAX_BOARD_PIXEL_HEIGHT = 560;
     private static final Color EMPTY_COLOUR = Color.web("#090d21");
     private static final Color GRID_COLOUR = Color.web("#293462");
 
     private final BorderPane root = new BorderPane();
-    private final Rectangle[][] lockedCellViews = new Rectangle[Board.HEIGHT][Board.WIDTH];
+    private final Rectangle[][] lockedCellViews;
+    private final int boardWidth;
+    private final int boardHeight;
+    private final int cellSize;
     private final Pane activePieceLayer = new Pane();
     private final PauseOverlay pauseOverlay = new PauseOverlay();
     private final Label scoreLabel = new Label("Score: 0");
@@ -48,8 +53,16 @@ public class GameScreen {
     private Group activePieceView;
     private int finalScore;
 
-    public GameScreen(Runnable onRestart, IntConsumer onSaveScore, Runnable menuExitButton) {
+    private Tetromino lastRenderedPiece;
+    private int[][] lastRenderedShape;
 
+    public GameScreen(int boardWidth, int boardHeight, Runnable onRestart, IntConsumer onSaveScore, Runnable menuExitButton) {
+
+
+        this.boardWidth = boardWidth;
+        this.boardHeight = boardHeight;
+        this.cellSize = Math.min(DEFAULT_CELL_SIZE, Math.min(MAX_BOARD_PIXEL_WIDTH / boardWidth, MAX_BOARD_PIXEL_HEIGHT / boardHeight));
+        this.lockedCellViews = new Rectangle[boardHeight][boardWidth];
         Objects.requireNonNull(onRestart, "onRestart");
         Objects.requireNonNull(onSaveScore, "onSaveScore");
 
@@ -57,26 +70,26 @@ public class GameScreen {
         /*  build the board itself - locked grid, active piece layer, pause     */
         /* -------------------------------------------------------------------- */
         GridPane lockedGrid = createLockedGrid();
-        int boardWidth = Board.WIDTH * CELL_SIZE;
-        int boardHeight = Board.HEIGHT * CELL_SIZE;
+        int boardPixelWidth = boardWidth * cellSize;
+        int boardPixelHeight = boardHeight * cellSize;
 
-        activePieceLayer.setMinSize(boardWidth, boardHeight);
-        activePieceLayer.setPrefSize(boardWidth, boardHeight);
-        activePieceLayer.setMaxSize(boardWidth, boardHeight);
+        activePieceLayer.setMinSize(boardPixelWidth, boardPixelHeight);
+        activePieceLayer.setPrefSize(boardPixelWidth, boardPixelHeight);
+        activePieceLayer.setMaxSize(boardPixelWidth, boardPixelHeight);
         activePieceLayer.setMouseTransparent(true);
 
-        pauseOverlay.setMinSize(boardWidth, boardHeight);
-        pauseOverlay.setPrefSize(boardWidth, boardHeight);
-        pauseOverlay.setMaxSize(boardWidth, boardHeight);
+        pauseOverlay.setMinSize(boardPixelWidth, boardPixelHeight);
+        pauseOverlay.setPrefSize(boardPixelWidth, boardPixelHeight);
+        pauseOverlay.setMaxSize(boardPixelWidth, boardPixelHeight);
 
         // stacked on top of each other: locked blocks at the bottom, the
         // falling piece above that, the pause overlay above everything
 
         StackPane boardStack = new StackPane(lockedGrid, activePieceLayer, pauseOverlay);
         boardStack.setAlignment(Pos.TOP_LEFT);
-        boardStack.setMinSize(boardWidth, boardHeight);
-        boardStack.setPrefSize(boardWidth, boardHeight);
-        boardStack.setMaxSize(boardWidth, boardHeight);
+        boardStack.setMinSize(boardPixelWidth, boardPixelHeight);
+        boardStack.setPrefSize(boardPixelWidth, boardPixelHeight);
+        boardStack.setMaxSize(boardPixelWidth, boardPixelHeight);
         boardStack.getStyleClass().add("game-board-frame");
 
         /* -------------------------------------------------------------------- */
@@ -123,7 +136,6 @@ public class GameScreen {
     // underneath on a second row - keeps the whole bar narrow instead of
     // stretching everything out sideways
 
-
     private VBox createBottomBar() {
         scoreLabel.getStyleClass().add("game-score");
 
@@ -149,27 +161,27 @@ public class GameScreen {
 
     private GridPane createLockedGrid() {
         GridPane grid = new GridPane();
-        for (int row = 0; row < Board.HEIGHT; row++) {
-            grid.getRowConstraints().add(new RowConstraints(CELL_SIZE));
+        for (int row = 0; row < boardHeight; row++) {
+            grid.getRowConstraints().add(new RowConstraints(cellSize));
         }
-        for (int col = 0; col < Board.WIDTH; col++) {
-            grid.getColumnConstraints().add(new ColumnConstraints(CELL_SIZE));
+        for (int col = 0; col < boardWidth; col++) {
+            grid.getColumnConstraints().add(new ColumnConstraints(cellSize));
         }
 
-        for (int row = 0; row < Board.HEIGHT; row++) {
-            for (int col = 0; col < Board.WIDTH; col++) {
-                Rectangle cell = new Rectangle(CELL_SIZE, CELL_SIZE, EMPTY_COLOUR);
+        for (int row = 0; row < boardHeight; row++) {
+            for (int col = 0; col < boardWidth; col++) {
+                Rectangle cell = new Rectangle(cellSize, cellSize, EMPTY_COLOUR);
                 cell.setStroke(GRID_COLOUR);
                 lockedCellViews[row][col] = cell;
                 grid.add(cell, col, row);
             }
         }
 
-        int boardWidth = Board.WIDTH * CELL_SIZE;
-        int boardHeight = Board.HEIGHT * CELL_SIZE;
-        grid.setMinSize(boardWidth, boardHeight);
-        grid.setPrefSize(boardWidth, boardHeight);
-        grid.setMaxSize(boardWidth, boardHeight);
+        int boardPixelWidth = boardWidth * cellSize;
+        int boardPixelHeight = boardHeight * cellSize;
+        grid.setMinSize(boardPixelWidth, boardPixelHeight);
+        grid.setPrefSize(boardPixelWidth, boardPixelHeight);
+        grid.setMaxSize(boardPixelWidth, boardPixelHeight);
         return grid;
     }
 
@@ -179,6 +191,10 @@ public class GameScreen {
 
     public BorderPane getRoot() {
         return root;
+    }
+
+    public int getCellSize() {
+        return cellSize;
     }
 
     public void setKeyHandler(EventHandler<KeyEvent> keyHandler) {
@@ -220,21 +236,32 @@ public class GameScreen {
 
     // repaints the fixed blocks and recreates the currently falling piece
     public void render(Board board, Color[][] lockedColors, Tetromino currentPiece) {
-        for (int row = 0; row < Board.HEIGHT; row++) {
-            for (int col = 0; col < Board.WIDTH; col++) {
+        for (int row = 0; row < boardHeight; row++) {
+            for (int col = 0; col < boardWidth; col++) {
                 lockedCellViews[row][col].setFill(
                         board.isCellOccupied(row, col) ? lockedColors[row][col] : EMPTY_COLOUR);
             }
         }
 
-        activePieceLayer.getChildren().clear();
-        activePieceView = null;
         if (currentPiece == null) {
+            activePieceLayer.getChildren().clear();
+            activePieceView = null;
+            lastRenderedPiece = null;
             return;
         }
 
-        activePieceView = makePieceView(currentPiece);
-        activePieceLayer.getChildren().add(activePieceView);
+        boolean needsRebuild = activePieceView == null || currentPiece != lastRenderedPiece || currentPiece.getShape() != lastRenderedShape;
+
+        if (needsRebuild) {
+            activePieceLayer.getChildren().clear();;
+            activePieceView = makePieceView(currentPiece);
+            activePieceLayer.getChildren().add(activePieceView);
+            lastRenderedPiece = currentPiece;
+            lastRenderedShape = currentPiece.getShape();
+        } else {
+            activePieceView.setLayoutX(currentPiece.getX() * cellSize);
+            activePieceView.setLayoutY(currentPiece.getY() * cellSize) ;
+        }
     }
 
     private Group makePieceView(Tetromino piece) {
@@ -244,17 +271,17 @@ public class GameScreen {
         for (int row = 0; row < shape.length; row++) {
             for (int col = 0; col < shape[row].length; col++) {
                 if (shape[row][col] == 1) {
-                    Rectangle cell = new Rectangle(CELL_SIZE, CELL_SIZE, piece.getColor());
+                    Rectangle cell = new Rectangle(cellSize, cellSize, piece.getColor());
                     cell.setStroke(GRID_COLOUR);
-                    cell.setX(col * CELL_SIZE);
-                    cell.setY(row * CELL_SIZE);
+                    cell.setX(col * cellSize);
+                    cell.setY(row * cellSize);
                     pieceView.getChildren().add(cell);
                 }
             }
         }
 
-        pieceView.setLayoutX(piece.getX() * CELL_SIZE);
-        pieceView.setLayoutY(piece.getY() * CELL_SIZE);
+        pieceView.setLayoutX(piece.getX() * cellSize);
+        pieceView.setLayoutY(piece.getY() * cellSize);
         return pieceView;
     }
 
