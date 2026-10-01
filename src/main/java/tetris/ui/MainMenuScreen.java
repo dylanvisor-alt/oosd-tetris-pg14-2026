@@ -31,7 +31,7 @@ public class MainMenuScreen {
         Button configurationButton = createMenuButton("Configuration", onConfiguration);
         Button highScoresButton = createMenuButton("High Scores", onHighScores);
         Button exitButton = createMenuButton("Exit", onExit);
-        Button twoPlayerButton = createMenuButton("2 Player!", onTwoPlayer);
+        Button twoPlayerButton = createMenuButton("2 Player", onTwoPlayer);
 
 
         VBox menu = new VBox(
