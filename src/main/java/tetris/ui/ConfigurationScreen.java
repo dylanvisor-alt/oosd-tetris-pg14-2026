@@ -72,8 +72,11 @@ public final class ConfigurationScreen {
                 configController.isSoundEffectsEnabled(), configController::setSoundEffectsEnabled), 3);
         addSetting(settings, "AI play", createCheckBox(
                 configController.isAiPlayEnabled(), configController::setAiPlayEnabled), 4);
-        addSetting(settings, "Extended mode", createCheckBox(
-                configController.isExtendedModeEnabled(), configController::setExtendedModeEnabled), 5);
+        // addSetting(settings, "Extended mode", createCheckBox(
+        //        configController.isExtendedModeEnabled(), configController::setExtendedModeEnabled), 5);
+        addSetting(settings, "External Player", createCheckBox(
+                configController.isExternalPlayerEnabled(), configController::setExternalPlayerEnabled), 5);
+
 
         Label note = new Label("Settings are saved for this session.");
         note.getStyleClass().add("config-note");

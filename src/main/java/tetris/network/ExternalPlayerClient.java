@@ -44,6 +44,8 @@ public class ExternalPlayerClient {
                     currentShape,
                     nextShape);
 
+            System.out.println(gson.toJson(game));
+
             writer.write(gson.toJson(game));
             writer.newLine();
             writer.flush();
@@ -68,4 +70,6 @@ public class ExternalPlayerClient {
 
     public record ExternalMove(int opX, int opRotate) {
     }
+
+
 }
