@@ -19,7 +19,7 @@ public final class GameConfig {
 
     private boolean externalPlayerEnabled;
 
-    public boolean isExternalPlayerEnabled {
+    public boolean isExternalPlayerEnabled() {
         return externalPlayerEnabled;
     }
 
