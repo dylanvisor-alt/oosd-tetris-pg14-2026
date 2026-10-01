@@ -71,4 +71,13 @@ public final class ConfigController {
     public int getBoardHeight() {
         return gameConfig.getBoardHeight();
     }
+
+    public boolean isExternalPlayerEnabled() {
+        return gameConfig.isExternalPlayerEnabled();
+    }
+
+    public void setExternalPlayerEnabled(boolean enabled) {
+        gameConfig.setExternalPlayerEnabled(enabled);
+    }
+
 }

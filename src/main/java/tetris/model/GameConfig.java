@@ -17,6 +17,16 @@ public final class GameConfig {
     private boolean aiPlayEnabled;
     private boolean extendedModeEnabled;
 
+    private boolean externalPlayerEnabled;
+
+    public boolean isExternalPlayerEnabled {
+        return externalPlayerEnabled;
+    }
+
+    public void setExternalPlayerEnabled(boolean externalPlayerEnabled) {
+        this.externalPlayerEnabled = externalPlayerEnabled;
+    }
+
     public String getFieldSize() {
         return fieldSize;
     }
@@ -38,7 +48,7 @@ public final class GameConfig {
     }
 
     public int getBoardHeight() {
-        return Integer.parseInt(fieldSize.split(" x ")[0].trim());
+        return Integer.parseInt(fieldSize.split(" x ")[1].trim());
     }
 
     public void setLevel(int level) {
