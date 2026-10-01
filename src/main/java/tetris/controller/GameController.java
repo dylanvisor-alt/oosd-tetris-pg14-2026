@@ -14,8 +14,11 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.Color;
 import javafx.application.Platform;
 import tetris.network.ExternalPlayerClient;
-import java.io.IOException;
+import tetris.ai.AiMove;
+import tetris.ai.AiPlayer;
+import tetris.stats.MatchHistoryService;
 
+import java.io.IOException;
 import java.util.List;
 
 /* -------------------------------------------------------------------- */
@@ -39,17 +42,19 @@ public class GameController {
     /* -------------------------------------------------------------------- */
     /*  game state - changes constantly while playing                       */
     /* -------------------------------------------------------------------- */
-    private final Board board = new Board();
+    private final Board board;
     private final GameScreen gamesScreen;
-    private final Color[][] lockedColours = new Color[Board.HEIGHT][Board.WIDTH];
+    private final Color[][] lockedColours;
+    private final ConfigController configController;
+    private final MatchHistoryService matchHistoryService;
     private final AnimationTimer gravityTimer;
     private final AudioManager audioManager;
     private final ScoringStrategy scoringStrategy;
     private final ExternalPlayerClient externalPlayerClient = new ExternalPlayerClient();
-    private Tetromino nextPiece;
-    private volatile long pieceNumber;
 
     private Tetromino currentPiece;
+    private Tetromino nextPiece;
+    private volatile long pieceNumber;
     private GameState gameState = GameState.RUNNING;
     private int score;
     private double lastFrameTimeMs;
@@ -111,7 +116,7 @@ public class GameController {
         }
 
         double fallProgress = accumulatedFallMs / DROP_SPEED;
-        gamesScreen.setActivePieceVerticalOffset(fallProgress * GameScreen.CELL_SIZE);
+        gamesScreen.setActivePieceVerticalOffset(fallProgress * gamesScreen.getCellSize());
     }
 
     private boolean canCurrentPieceFall() {
@@ -166,8 +171,8 @@ public class GameController {
 
     private Runnable backToMenu;
 
-    public GameController(GameScreen gameScreen, Runnable backToMenu, AudioManager audioManager) {
-        this(gameScreen, backToMenu, audioManager, new StandardScoringStrategy());
+    public GameController(GameScreen gameScreen, Runnable backToMenu, AudioManager audioManager, ConfigController configController, MatchHistoryService matchHistoryService) {
+        this(gameScreen, backToMenu, audioManager, new StandardScoringStrategy(), configController, matchHistoryService);
     }
 
     /**
@@ -176,11 +181,16 @@ public class GameController {
      *                        rules without changing any other game logic.
      */
     public GameController(GameScreen gameScreen, Runnable backToMenu,
-                          AudioManager audioManager, ScoringStrategy scoringStrategy) {
+                          AudioManager audioManager, ScoringStrategy scoringStrategy, ConfigController configController, MatchHistoryService matchHistoryService) {
         this.gamesScreen = gameScreen;
         this.backToMenu = backToMenu;
         this.audioManager = audioManager;
         this.scoringStrategy = scoringStrategy;
+        this.configController = configController;
+        this.matchHistoryService = matchHistoryService;
+        this.board = new Board(configController.getBoardWidth(), configController.getBoardHeight());
+        this.lockedColours = new Color[board.getHeight()][board.getWidth()];
+
         gravityTimer = new AnimationTimer() {
             @Override
             public void handle(long currentTimeNanos) {
@@ -188,6 +198,7 @@ public class GameController {
                 updateGravity(currentTimeMs);
             }
         };
+
     }
 
     private void moveHorizontally(int direction) {
@@ -239,7 +250,7 @@ public class GameController {
 
     private void saveCurrentPieceColours() {
         board.eachCellFilled(currentPiece, currentPiece.getX(), currentPiece.getY(), (boardRow, boardCol) -> {
-            if (boardRow >= 0 && boardRow < Board.HEIGHT && boardCol >= 0 && boardCol < Board.WIDTH) {
+            if (boardRow >= 0 && boardRow < board.getHeight() && boardCol >= 0 && boardCol < board.getWidth()) {
                 lockedColours[boardRow][boardCol] = lockedColour;
             }
         });
@@ -266,7 +277,7 @@ public class GameController {
         for (int row = clearedRow; row > 0; row--) {
             lockedColours[row] = lockedColours[row - 1].clone();
         }
-        lockedColours[0] = new Color[Board.WIDTH];
+        lockedColours[0] = new Color[board.getWidth()];
     }
 
     /* -------------------------------------------------------------------- */
@@ -274,132 +285,153 @@ public class GameController {
     /* -------------------------------------------------------------------- */
 
     private void spawnPiece() {
-    if (nextPiece == null) {
+        if (nextPiece == null) {
+            nextPiece = TetrominoFactory.createRandomPiece();
+        }
+
+        currentPiece = nextPiece;
         nextPiece = TetrominoFactory.createRandomPiece();
+
+        accumulatedFallMs = 0;
+        lastFrameTimeMs = 0;
+
+        long currentPieceNumber = ++pieceNumber;
+
+        if (!board.canPlace(currentPiece, currentPiece.getX(), currentPiece.getY())) {
+            gameState = GameState.GAME_OVER;
+            gravityTimer.stop();
+            gamesScreen.showGameOver(score);
+            matchHistoryService.recordMatchAsync(score, board.getWidth(), board.getHeight());
+            return;
+        }
+
+        if (configController.isAiPlayEnabled()) {
+            positionPieceWithAi();
+        } else if (configController.isExternalPlayerEnabled()) {
+            requestExternalMove(currentPiece, currentPieceNumber);
+        }
     }
 
-    currentPiece = nextPiece;
-    nextPiece = TetrominoFactory.createRandomPiece();
+    private void positionPieceWithAi() {
+        AiMove move = AiPlayer.chooseBestPlacement(board, currentPiece);
 
-    accumulatedFallMs = 0;
-    lastFrameTimeMs = 0;
+        for (int rotation = 0; rotation < move.rotations(); rotation++) {
+            currentPiece.rotate();
+        }
 
-    long currentPieceNumber = ++pieceNumber;
-
-    if (!board.canPlace(currentPiece, currentPiece.getX(), currentPiece.getY())) {
-        gameState = GameState.GAME_OVER;
-        gravityTimer.stop();
-        gamesScreen.showGameOver(score);
-        return;
-    }
-
-    requestExternalMove(currentPiece, currentPieceNumber);
-}
-
-private void requestExternalMove(Tetromino piece, long currentPieceNumber) {
-    int[][] cells = copyBoard();
-    int[][] currentShape = copyMatrix(piece.getShape());
-    int[][] followingShape = copyMatrix(nextPiece.getShape());
-
-    Thread connectionThread = new Thread(() -> {
-        boolean warningShown = false;
-
-        while (pieceNumber == currentPieceNumber) {
-            try {
-                ExternalPlayerClient.ExternalMove move =
-                        externalPlayerClient.requestMove(
-                                cells,
-                                currentShape,
-                                followingShape);
-
-                Platform.runLater(() ->
-                        applyExternalMove(move, piece, currentPieceNumber));
-                return;
-
-            } catch (IOException exception) {
-                if (!warningShown) {
-                    Platform.runLater(() ->
-                            gamesScreen.showStatus(
-                                    "External player unavailable - retrying..."));
-                    warningShown = true;
-                }
-
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException interrupted) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
+        while (currentPiece.getX() != move.targetX()) {
+            int beforeX = currentPiece.getX();
+            moveHorizontally(move.targetX() > currentPiece.getX() ? 1 : -1);
+            if (currentPiece.getX() == beforeX) {
+                break;
             }
         }
-    });
-
-    connectionThread.setDaemon(true);
-    connectionThread.start();
-}
-
-private void applyExternalMove(
-        ExternalPlayerClient.ExternalMove move,
-        Tetromino piece,
-        long currentPieceNumber) {
-
-    if (pieceNumber != currentPieceNumber ||
-            currentPiece != piece ||
-            gameState != GameState.RUNNING) {
-        return;
     }
 
-    int rotations = Math.floorMod(move.opRotate(), 4);
+    private void requestExternalMove(Tetromino piece, long currentPieceNumber) {
+        int[][] cells = copyBoard();
+        int[][] currentShape = copyMatrix(piece.getShape());
+        int[][] followingShape = copyMatrix(nextPiece.getShape());
 
-    for (int i = 0; i < rotations; i++) {
-        tryRotate();
+        Thread connectionThread = new Thread(() -> {
+            boolean warningShown = false;
+
+            while (pieceNumber == currentPieceNumber) {
+                try {
+                    ExternalPlayerClient.ExternalMove move =
+                            externalPlayerClient.requestMove(
+                                    cells,
+                                    currentShape,
+                                    followingShape);
+
+                    Platform.runLater(() ->
+                            applyExternalMove(move, piece, currentPieceNumber));
+                    return;
+
+                } catch (IOException exception) {
+                    if (!warningShown) {
+                        Platform.runLater(() ->
+                                gamesScreen.showStatus(
+                                        "External player unavailable - retrying..."));
+                        warningShown = true;
+                    }
+
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+            }
+        });
+
+        connectionThread.setDaemon(true);
+        connectionThread.start();
     }
 
-    int targetX = move.opX();
+    private void applyExternalMove(
+            ExternalPlayerClient.ExternalMove move,
+            Tetromino piece,
+            long currentPieceNumber) {
 
-    while (currentPiece.getX() < targetX) {
-        int previousX = currentPiece.getX();
-        moveHorizontally(1);
-
-        if (currentPiece.getX() == previousX) {
-            break;
+        if (pieceNumber != currentPieceNumber ||
+                currentPiece != piece ||
+                gameState != GameState.RUNNING) {
+            return;
         }
-    }
 
-    while (currentPiece.getX() > targetX) {
-        int previousX = currentPiece.getX();
-        moveHorizontally(-1);
+        int rotations = Math.floorMod(move.opRotate(), 4);
 
-        if (currentPiece.getX() == previousX) {
-            break;
+        for (int i = 0; i < rotations; i++) {
+            tryRotate();
         }
-    }
 
-    gamesScreen.showStatus("External player connected");
-    render();
-}
+        int targetX = move.opX();
 
-private int[][] copyBoard() {
-    int[][] cells = new int[Board.HEIGHT][Board.WIDTH];
+        while (currentPiece.getX() < targetX) {
+            int previousX = currentPiece.getX();
+            moveHorizontally(1);
 
-    for (int row = 0; row < Board.HEIGHT; row++) {
-        for (int col = 0; col < Board.WIDTH; col++) {
-            cells[row][col] = board.getCell(row, col);
+            if (currentPiece.getX() == previousX) {
+                break;
+            }
         }
+
+        while (currentPiece.getX() > targetX) {
+            int previousX = currentPiece.getX();
+            moveHorizontally(-1);
+
+            if (currentPiece.getX() == previousX) {
+                break;
+            }
+        }
+
+        gamesScreen.showStatus("External player connected");
+        render();
     }
 
-    return cells;
-}
+    private int[][] copyBoard() {
+        int[][] cells = new int[board.getHeight()][board.getWidth()];
 
-private int[][] copyMatrix(int[][] matrix) {
-    int[][] copy = new int[matrix.length][];
+        for (int row = 0; row < board.getHeight(); row++) {
+            for (int col = 0; col < board.getWidth(); col++) {
+                cells[row][col] = board.getCell(row, col);
+            }
+        }
 
-    for (int row = 0; row < matrix.length; row++) {
-        copy[row] = matrix[row].clone();
+        return cells;
     }
 
-    return copy;
-}
+    private int[][] copyMatrix(int[][] matrix) {
+        int[][] copy = new int[matrix.length][];
+
+        for (int row = 0; row < matrix.length; row++) {
+            copy[row] = matrix[row].clone();
+        }
+
+        return copy;
+    }
 
     private void togglePause() {
         if (gameState == GameState.RUNNING) {
@@ -423,6 +455,6 @@ private int[][] copyMatrix(int[][] matrix) {
     private void render() {
         gamesScreen.render(board, lockedColours, currentPiece);
         double fallProgress = accumulatedFallMs / DROP_SPEED;
-        gamesScreen.setActivePieceVerticalOffset(fallProgress * GameScreen.CELL_SIZE);
+        gamesScreen.setActivePieceVerticalOffset(fallProgress * gamesScreen.getCellSize());
     }
 }
