@@ -13,7 +13,7 @@ public record MatchRecord(
                 + "\"score\":" + score + ","
                 + "\"boardWidth\":" + boardWidth + ","
                 + "\"boardHeight\":" + boardHeight + ","
-                + "\"playedAt\":" + playedAt + "\""
+                + "\"playedAt\":\"" + playedAt + "\""
                 + "}";
     }
 
